@@ -1,39 +1,60 @@
 services:
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:1.58.2  # Pin to specific stable version
     container_name: n8n
     restart: unless-stopped
-    user: "0:0"
 
-    # Load clean, version-controlled environment variables
+    # Don't run as root for security
+    user: "1000:1000"
+
     env_file:
       - .env
 
-    # Persist workflows, credentials, execution data
+    # Enhanced volume configuration for data persistence
     volumes:
-      - ./n8n_data:/home/node/.n8n
-      - ./backups:/backups
-    # Attach to the existing reverse-proxy network
+      # Main n8n data (workflows, credentials, settings)
+      - n8n_data:/home/node/.n8n
+      # Binary data storage
+      - n8n_binary_data:/home/node/.n8n/binaryData
+      # Custom nodes if needed
+      - n8n_custom_extensions:/home/node/.n8n/custom
+      # Backup directory
+      - ./backups:/backups:rw
+      # Temporary fix for permissions
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+
     networks:
       - nginx_network
 
-    # Health-check for easier monitoring
+    # Health check for monitoring
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5678/healthz"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5678/healthz"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 30s
 
-# ────────────────────────────────────────────────
-# Named volumes
-# ────────────────────────────────────────────────
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+# Named volumes for data persistence
 volumes:
   n8n_data:
+    driver: local
+  n8n_binary_data:
+    driver: local
+  n8n_custom_extensions:
+    driver: local
 
-# ────────────────────────────────────────────────
-# External networks
-# ────────────────────────────────────────────────
+# Networks
 networks:
   nginx_network:
     external: true
-
