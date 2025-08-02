@@ -1,6 +1,6 @@
 services:
   n8n:
-    image: n8nio/n8n:1.58.2  # Pin to specific stable version
+    image: docker.n8n.io/n8nio/n8n
     container_name: n8n
     restart: unless-stopped
 
