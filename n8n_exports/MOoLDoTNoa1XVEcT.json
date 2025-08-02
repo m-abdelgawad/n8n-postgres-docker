@@ -1,0 +1,124 @@
+{
+  "createdAt": "2025-07-28T19:37:59.740Z",
+  "updatedAt": "2025-07-28T21:03:28.288Z",
+  "id": "MOoLDoTNoa1XVEcT",
+  "name": "Daily Gold Insight Report",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini-search-preview",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI-SEARCH-PREVIEW"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are an expert financial analyst AI specializing in the Egyptian gold market. Your primary goal is to deliver the most accurate, actionable insights to support gold buying or holding decisions.\n\n**Your analysis must always include:**\n1. The current price of 24k gold in Egypt (EGP/gram).\n2. The lowest, average, and highest price for the past 30 days.\n3. A clear, quantitative comparison of the current price to the 30-day low, average, and high (e.g., \"Current price is 2% above the 30-day average and 8% below the 30-day high\").\n4. A concise, data-driven insight stating whether the current price is low, average, or high compared to the 30-day range, and what that means for buyers or holders.\n5. A brief, actionable recommendation (Buy, Hold, or Wait) based on the current price's position and recent momentum, using chain-of-thought reasoning to justify the decision.\n6. Format the output as a clean, Telegram-ready markdown report with headings, bullet points, and a summary section.\n7. Do not include any data or analysis outside the last 30 days.\n8. Do not discuss other assets, commodities, or markets.\n9. Always include a disclaimer that you are an AI assistant and this is not certified financial advice.\n\n**Best practices:**\n- Use concise tables for summary statistics.\n- Prioritize clarity, context, and actionable insights over raw data.\n- Justify recommendations with clear, step-by-step reasoning.\n",
+              "role": "system"
+            },
+            {
+              "content": "Generate a gold price report for Egypt with the following structure:\n\n1. **Current Price:** State the current price for one gram of 24k gold in EGP.\n2. **30-Day Price Summary Table:** Present a table with the lowest, average, and highest prices for the past 30 days.\n3. **Price Position Analysis:** Compare the current price to the 30-day low, average, and high. Quantify the difference (e.g., as a percentage or EGP amount).\n4. **Actionable Insight:** Provide a concise, data-driven summary stating whether the current price is low, average, or high compared to the 30-day range, and what this means for buyers or holders.\n5. **Recommendation:** Give a clear recommendation (Buy, Hold, or Wait) and justify it using the data and recent price momentum.\n6. Format the entire output as a single, Telegram-ready markdown message.\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        224,
+        0
+      ],
+      "id": "c8194ed4-ba23-4f66-8a9c-15f25070ad8e",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "uzI0ddlmlW7Q1iJg",
+          "name": "OpenAI ChatGPT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7178716474",
+        "text": "={{ $json.message.content }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "ac91236d-92da-4863-892e-e4ce7487bc34",
+      "name": "Send a text message",
+      "webhookId": "4076c0f9-b009-41c4-8778-016593e346f0",
+      "credentials": {
+        "telegramApi": {
+          "id": "281Etr1lqmrs1BNc",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "03caa93f-8fd3-4f4d-a4ee-d9b34469d77b",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "connections": {
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "dce7a5c1-2f32-4f53-8e11-58e3df7137c1",
+  "triggerCount": 0,
+  "tags": []
+}

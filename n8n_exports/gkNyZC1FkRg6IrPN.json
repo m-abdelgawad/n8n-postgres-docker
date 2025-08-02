@@ -1,0 +1,467 @@
+{
+  "createdAt": "2025-07-26T22:38:14.424Z",
+  "updatedAt": "2025-07-28T19:11:45.164Z",
+  "id": "gkNyZC1FkRg6IrPN",
+  "name": "AI Budget Analyzer",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        -144
+      ],
+      "id": "1ce8d294-3550-4dd0-a3ec-0f6fa0b3d1e9",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "http://walletscraper.automagicdeveloper.com/finance-summary?concise=true&top_n_categories=10",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "concise",
+              "value": "true"
+            },
+            {
+              "name": "top_n_categories",
+              "value": "10"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-token",
+              "value": "fmW3Lb4LGg2LVLEddKj3TpWy8dgsgpNz"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        656,
+        -240
+      ],
+      "id": "0e9c3640-b8df-4c86-bb1a-52be817f555f",
+      "name": "HTTP Request",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are “AI Budget Analyzer”, a numbers‑driven personal‑finance assistant.\n\nRules\n•  Use only the data in the JSON provided—never invent numbers or categories.  \n•  Tone: friendly, concise, professional. No fluff, no “Dear…”.  \n•  Output must be plain text (Markdown allowed) so it works for both email and Telegram.  \n•  Greeting must start with “Hello”.  \n•  Never suggest skipping essential healthcare; offer optimisation ideas instead (discount pharmacies, generics, insurance claims).  \n•  Do **not** include a subject line—body text only.  ",
+              "role": "system"
+            },
+            {
+              "content": "=You are my daily financial assistant.  \nContext:  \n1.  Fixed pocket‑money transfer to my wife: **EGP 5,000 / month**.  \n2.  Newborn baby ⇒ frequent lunch deliveries.  \n3.  Grocery baskets (~ EGP 1,000 +) every 2‑3 days.\n\nTargets  \n•  Income ≈ EGP 85,000 / month  \n•  Desired savings = **EGP 50,000 / month**\n\nWrite a plain‑text report for **Mohamed AbdelGawad** with:\n\nHello + one‑line greeting.\n\n**What went well yesterday**  \n• quote specific low‑spend items.\n\n**What went wrong yesterday**  \n• quote high or unusual items (category + amount).\n\n**What to look out for today**  \n• if today_transactions exist, comment; else give proactive tips.\n\n**Insights from the past two months**  \n• top categories (totals) and how they affect the 50 K goal.\n\n**Balance & Projection**  \n• current total balance.  \n• month‑to‑date expense.  \n• projected total expense for month‑end =  \n  (avg daily spend last 7 days × days remaining) + month‑to‑date expense.  \n  Explain the math in ≤ 2 lines.\n\n**Action steps**  \n1‑6 numbered, realistic steps:  \n– daily spending cap for the rest of month to reach 50 K savings.  \n– one‑week cap for delivery & groceries.  \n– ways to optimise health costs (no sacrifice of care).  \n– reminder to move savings first.\n\nShort closing line and sign‑off:  \n— Your AI Budget Analyzer\n\nAnalyse the JSON below and return only the body text.\n{{ JSON.stringify($json, null, 2) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1104,
+        -144
+      ],
+      "id": "41a7bf36-49c8-4e76-879a-0b91366ba8e2",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "uzI0ddlmlW7Q1iJg",
+          "name": "OpenAI ChatGPT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "muhammadabdelgawwad@gmail.com",
+        "subject": "=Daily Financial Update – {{ $now.toFormat(\"dd/MM/yyyy\") }}",
+        "message": "={{ $json.message.content.replace(/\\n/g, \"<br>\") }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1504,
+        -240
+      ],
+      "id": "0bb0effb-6b2e-4e72-99d2-517ac101f725",
+      "name": "Send a message",
+      "webhookId": "551179e7-024c-4b01-af23-efc1b123764e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V8a9zJjrVNAGcGxF",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "chatIds": "7178716474",
+          "userIds": "7178716474"
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        -336
+      ],
+      "id": "9c724dad-c761-405b-8220-9ae1b2bd12bd",
+      "name": "Telegram Trigger",
+      "webhookId": "9e7dcee8-6369-4680-9704-72a8538f2031",
+      "credentials": {
+        "telegramApi": {
+          "id": "281Etr1lqmrs1BNc",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4be04e8d-40fc-4a31-88ca-1d5410b07625",
+              "name": "triggerSource",
+              "value": "schedule",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        -144
+      ],
+      "id": "ad4bcef3-d6c1-473f-a225-b32b4ac313fb",
+      "name": "Set triggerSource to schedule"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4be04e8d-40fc-4a31-88ca-1d5410b07625",
+              "name": "triggerSource",
+              "value": "telegram",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        -336
+      ],
+      "id": "bc391af5-0af5-460e-b481-a02e48e0ad6b",
+      "name": "Set triggerSource to telegram"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "fieldsToMatchString": "triggerSource",
+        "joinMode": "keepEverything",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        432,
+        -240
+      ],
+      "id": "8a034930-d326-4213-81a6-12957a2e378f",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b3c5b71e-afb8-4069-9efe-791b1cc7dbad",
+              "leftValue": "={{ $('Merge').item.json.triggerSource }}",
+              "rightValue": "telegram",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -240
+      ],
+      "id": "a5f26f84-35ca-4de2-b3df-5220fe6f0ed9",
+      "name": "If Trigger is Telegram"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a personal finance assistant named “AI Budget Analyzer”. \nYou only answer based on the finance JSON provided. \nBe clear, concise, and friendly. Never make up values.",
+              "role": "system"
+            },
+            {
+              "content": "=User question:\n{{ $('Telegram Trigger').item.json.message.text }}\n\nFinance data:\n{{ JSON.stringify($json, null, 2) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1104,
+        -432
+      ],
+      "id": "c4261403-468e-4fd9-bd53-715216880a79",
+      "name": "Message a model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "uzI0ddlmlW7Q1iJg",
+          "name": "OpenAI ChatGPT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7178716474",
+        "text": "={{ $json.message.content }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "reply_to_message_id": "={{ $('Telegram Trigger').item.json.message.message_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1504,
+        -432
+      ],
+      "id": "74970eed-989d-4489-8ba0-0659e20aa5be",
+      "name": "Reply to user message",
+      "webhookId": "062f47f9-4c56-4e5b-ae07-9a5a4a63ffe5",
+      "credentials": {
+        "telegramApi": {
+          "id": "281Etr1lqmrs1BNc",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7178716474",
+        "text": "={{ $json.message.content }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1504,
+        -48
+      ],
+      "id": "ba11ac2c-4ad5-4eea-99dc-d52c500a7829",
+      "name": "Send budget updates to user",
+      "webhookId": "062f47f9-4c56-4e5b-ae07-9a5a4a63ffe5",
+      "credentials": {
+        "telegramApi": {
+          "id": "281Etr1lqmrs1BNc",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set triggerSource to schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If Trigger is Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Send budget updates to user",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set triggerSource to telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set triggerSource to schedule": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Set triggerSource to telegram": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Trigger is Telegram": {
+      "main": [
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Reply to user message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send budget updates to user": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "c23c9909-46b5-4bd3-9188-4f5fdb981517",
+  "triggerCount": 2,
+  "tags": []
+}

@@ -1,12 +1,9 @@
-version: "3.8"
-
 services:
   n8n:
-    # If you kept the Dockerfile, build it; otherwise use image: n8nio/n8n:latest
-    build: .
-    # image: n8nio/n8n:latest   # ← uncomment if not building
+    image: n8nio/n8n:latest
     container_name: n8n
     restart: unless-stopped
+    user: "0:0"
 
     # Load clean, version-controlled environment variables
     env_file:
@@ -14,12 +11,8 @@ services:
 
     # Persist workflows, credentials, execution data
     volumes:
-      - n8n_data:/home/node/.n8n
-
-    # Expose the internal port (reverse-proxy handles 443/80)
-    ports:
-      - "5678:5678"
-
+      - ./n8n_data:/home/node/.n8n
+      - ./backups:/backups
     # Attach to the existing reverse-proxy network
     networks:
       - nginx_network

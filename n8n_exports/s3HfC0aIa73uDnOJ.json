@@ -1,0 +1,137 @@
+{
+  "createdAt": "2025-07-25T14:57:22.710Z",
+  "updatedAt": "2025-07-27T17:28:58.788Z",
+  "id": "s3HfC0aIa73uDnOJ",
+  "name": "My workflow 2",
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        0
+      ],
+      "id": "3ed1a9f7-adf2-4e9b-b262-60043e273c35",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        144,
+        0
+      ],
+      "id": "f66d462d-14cc-4ba4-8051-4a53974775d2",
+      "name": "Get many messages",
+      "webhookId": "87b8482b-ef3e-4917-bd29-9d1b2502e312",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "V8a9zJjrVNAGcGxF",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-nano",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-NANO"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are an email assistant helping to clean up an inbox.\n\nBelow is a list of emails. For each, classify it as:\n- \"keep\" if it's important (e.g., job interview, personal message, real inquiry)\n- \"delete\" if it's a newsletter, spam, ad, verification code, or automated content, etc...\n\nReturn a JSON list of:\n[\n  { \"index\": 0, \"decision\": \"keep\" },\n  ...\n]\nOnly return this JSON. Do not explain or write anything else.",
+              "role": "system"
+            },
+            {
+              "content": "=Emails:\n{{JSON.stringify($json.emails)}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        560,
+        0
+      ],
+      "id": "1f0b9012-8d50-4d70-b41b-f54d43c8ef5e",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "uzI0ddlmlW7Q1iJg",
+          "name": "OpenAI ChatGPT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const batchSize = 50;\nconst emails = items;\n\nfunction cleanText(text) {\n  return text?.replace(/(\\r\\n|\\n|\\r)/gm, \" \").substring(0, 200) || \"\";\n}\n\nlet batches = [];\nfor (let i = 0; i < emails.length; i += batchSize) {\n  const chunk = emails.slice(i, i + batchSize);\n  const simplified = chunk.map((item, index) => {\n    const headers = item.json.payload?.headers || [];\n    const getHeader = (name) => headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || \"\";\n    return {\n      index: index,\n      id: item.json.id,\n      from: getHeader(\"From\"),\n      subject: getHeader(\"Subject\"),\n      snippet: cleanText(item.json.snippet),\n      date: getHeader(\"Date\"),\n    };\n  });\n  batches.push({ json: { emails: simplified } });\n}\n\nreturn batches;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        0
+      ],
+      "id": "b385a827-631e-440b-a88e-72a5bd702809",
+      "name": "Batch Emails"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Batch Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Emails": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "cadf9f8e-316f-4410-9463-b9a007a39976",
+  "triggerCount": 0,
+  "tags": []
+}

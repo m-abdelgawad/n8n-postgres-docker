@@ -1,0 +1,184 @@
+{
+  "createdAt": "2025-07-18T20:38:47.984Z",
+  "updatedAt": "2025-07-27T17:28:52.671Z",
+  "id": "JQVCpe317xoGkgBc",
+  "name": "clean-remote-server-commands",
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        0
+      ],
+      "id": "3b011bde-e06f-4407-841c-1a22b011735e",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "command": "sudo find /tmp /var/tmp -type f -atime +2 -delete 2>/dev/null; echo 'Temp files cleaned'"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        880,
+        0
+      ],
+      "id": "cb113ec5-bf8b-40c4-8e04-18f1ccc43fed",
+      "name": "Temp Files Cleanup",
+      "credentials": {
+        "sshPassword": {
+          "id": "Sz72nLI1kpIS7WPi",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "echo \"Cleaning user cache...\"; rm -rf ~/.cache/* 2>/dev/null; echo \"User cache cleaned\""
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        656,
+        0
+      ],
+      "id": "d67d61f6-520a-4893-9954-b120b9f6e8f4",
+      "name": "Clean User Cache",
+      "credentials": {
+        "sshPassword": {
+          "id": "Sz72nLI1kpIS7WPi",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "if command -v docker &> /dev/null; then   echo \"Cleaning Docker...\";   sudo docker system df;   sudo docker system prune -af --volumes;   echo \"Docker cleaned\"; else   echo \"Docker not installed\"; fi"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        432,
+        0
+      ],
+      "id": "c9bc7d41-aba5-4f95-8746-c589b7d260c5",
+      "name": "Docker Cleanup",
+      "credentials": {
+        "sshPassword": {
+          "id": "Sz72nLI1kpIS7WPi",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "echo \"Cleaning logs older than 7 days...\"; sudo find /var/log -type f -name \"*.log\" -mtime +7 -exec truncate -s 0 {} \\; 2>/dev/null; sudo journalctl --vacuum-time=7d 2>/dev/null; echo \"Old logs cleaned\""
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "80c77fa2-e527-416c-95fb-7a0d7abb6a0e",
+      "name": "Clean Old Logs",
+      "credentials": {
+        "sshPassword": {
+          "id": "Sz72nLI1kpIS7WPi",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "echo \"Cleaning package cache...\"; sudo apt-get clean 2>/dev/null || sudo yum clean all 2>/dev/null; echo \"Package cache cleaned\""
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "920de950-1c79-457f-87ac-0fec27fd03bd",
+      "name": "Clean Package Manager Cache",
+      "notesInFlow": false,
+      "credentials": {
+        "sshPassword": {
+          "id": "Sz72nLI1kpIS7WPi",
+          "name": "SSH Password account"
+        }
+      },
+      "notes": "Clean Package Manager Cache"
+    }
+  ],
+  "connections": {
+    "Clean User Cache": {
+      "main": [
+        [
+          {
+            "node": "Temp Files Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Docker Cleanup": {
+      "main": [
+        [
+          {
+            "node": "Clean User Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Old Logs": {
+      "main": [
+        [
+          {
+            "node": "Docker Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Package Manager Cache": {
+      "main": [
+        [
+          {
+            "node": "Clean Old Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Clean Package Manager Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "5283df9c-6e3d-48c6-9415-bd8c08b77281",
+  "triggerCount": 0,
+  "tags": []
+}

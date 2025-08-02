@@ -1,0 +1,354 @@
+{
+  "createdAt": "2025-07-18T18:10:08.405Z",
+  "updatedAt": "2025-07-27T17:28:56.399Z",
+  "id": "cEUKb8r8sIMb7eNI",
+  "name": "storage-watcher",
+  "active": false,
+  "isArchived": true,
+  "nodes": [
+    {
+      "parameters": {
+        "command": "echo '=== SYSTEM INFO ==='; hostname; uptime; echo '\\n=== DISK USAGE ==='; df -h / | tail -1; echo '\\n=== BREAKDOWN ==='; sudo du -h --max-depth=1 / 2>/dev/null | sort -hr | head -10; echo '\\n=== CRITICAL PATHS ==='; echo \\\"Docker: $(sudo du -sh /var/lib/docker 2>/dev/null || echo 'Not found')\\\"; echo \\\"Logs: $(sudo du -sh /var/log 2>/dev/null)\\\"; echo \\\"Temp: $(sudo du -sh /tmp /var/tmp 2>/dev/null | grep total || echo '0')\\\""
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "98f6a6a1-5c84-445c-b3b0-1da9706f2953",
+      "name": "Get Storage Breakdown",
+      "notesInFlow": false,
+      "credentials": {
+        "sshPassword": {
+          "id": "Sz72nLI1kpIS7WPi",
+          "name": "SSH Password account"
+        }
+      },
+      "notes": "Get Initial Storage"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.stdout;\nconst lines = output.split('\\n');\n\nlet systemInfo = {};\nlet diskUsage = {};\nlet breakdown = [];\nlet criticalPaths = {};\n\nlet section = '';\nlines.forEach(line => {\n  line = line.trim();\n  \n  if (line.includes('SYSTEM INFO')) section = 'system';\n  else if (line.includes('DISK USAGE')) section = 'disk';\n  else if (line.includes('BREAKDOWN')) section = 'breakdown';\n  else if (line.includes('CRITICAL PATHS')) section = 'critical';\n  else if (line && section === 'system') {\n    if (line.includes('load average')) systemInfo.uptime = line;\n    else if (!line.includes('===')) systemInfo.hostname = line;\n  }\n  else if (line && section === 'disk') {\n    const parts = line.split(/\\s+/);\n    if (parts.length >= 6) {\n      diskUsage = {\n        device: parts[0],\n        total: parts[1],\n        used: parts[2],\n        available: parts[3],\n        usePercent: parseInt(parts[4]),\n        mountPoint: parts[5]\n      };\n    }\n  }\n  else if (line && section === 'breakdown') {\n    const match = line.match(/^(\\d+\\.?\\d*[KMGT]?)\\s+(.+)$/);\n    if (match) {\n      breakdown.push({ \n        size: match[1], \n        path: match[2] \n      });\n    }\n  }\n  else if (line && section === 'critical') {\n    // Remove quotes and parse\n    const cleanLine = line.replace(/\"/g, '');\n    const match = cleanLine.match(/^(.+?):\\s*(.+)$/);\n    if (match) {\n      // Extract just the size (e.g., \"62G\" from \"62G /var/lib/docker\")\n      const sizeMatch = match[2].match(/^(\\d+\\.?\\d*[KMGT]?)/);\n      criticalPaths[match[1]] = sizeMatch ? sizeMatch[1] : match[2];\n    }\n  }\n});\n\n// Now your dockerSize should parse correctly\nconst dockerSize = criticalPaths.Docker || 'Unknown';\nconst logsSize = criticalPaths.Logs || 'Unknown';\nconst tempSize = criticalPaths.Temp || 'Unknown';\n\nreturn [{\n  json: {\n    timestamp: new Date().toISOString(),\n    system: systemInfo,\n    diskUsage: diskUsage,\n    breakdown: breakdown,\n    criticalPaths: criticalPaths,\n    summary: {\n      percentUsed: diskUsage.usePercent || 0,\n      dockerSize: dockerSize,  // Should now be \"62G\"\n      logsSize: logsSize,      // Should now be \"86M\"\n      tempSize: tempSize       // Should now be \"0\"\n    },\n    alert: {\n      critical: diskUsage.usePercent >= 85,\n      high: diskUsage.usePercent >= 75 && diskUsage.usePercent < 85,\n      dockerHuge: parseFloat(dockerSize) > 30  // 62G is definitely huge!\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "a5367bb4-8abd-46fe-b3f4-36c7bf58f3b2",
+      "name": "Parse Storage Breakdown",
+      "notesInFlow": false,
+      "notes": "Parse Storage Breakdown"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4",
+          "mode": "id"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a server management AI. Analyze disk usage and decide if cleanup is needed. Use the appropriate tool based on your analysis.",
+              "role": "system"
+            },
+            {
+              "content": "=System Status:\\nDisk Usage: {{ $json.diskUsage.usePercent }}%\\nTotal: {{ $json.diskUsage.total }}, Used: {{ $json.diskUsage.used }}, Free: {{ $json.diskUsage.available }}\\n\\nDocker: {{ $json.criticalPaths.Docker }}\\nLogs: {{ $json.criticalPaths.Logs }}\\n\\nTop consumers:\\n{{ $json.breakdown.slice(0,5).map(d => d.path + ': ' + d.size).join('\\\\n') }}\n\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        624,
+        0
+      ],
+      "id": "f5a39f5c-32f7-48cb-9a9b-b84c410949d9",
+      "name": "Analyze Storage (User-Friendly)",
+      "notesInFlow": false,
+      "credentials": {
+        "openAiApi": {
+          "id": "MV8AsGfJY76Yv5FS",
+          "name": "OpenAi account"
+        }
+      },
+      "notes": "Analyze Storage (User-Friendly)"
+    },
+    {
+      "parameters": {
+        "command": "sudo du -h --max-depth=4 / 2>/dev/null | sort -hr | head -20"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        2784,
+        -16
+      ],
+      "id": "adeec8b6-5d83-4cda-a1c1-d61aedbd6734",
+      "name": "Get Large Folders",
+      "credentials": {
+        "sshPassword": {
+          "id": "Sz72nLI1kpIS7WPi",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "sudo find /tmp /var/tmp -type f -atime +2 -delete 2>/dev/null; echo 'Temp files cleaned'"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        2576,
+        -16
+      ],
+      "id": "9b073a2b-d7d3-4096-9bbe-6df032729f74",
+      "name": "Temp Files Cleanup",
+      "credentials": {
+        "sshPassword": {
+          "id": "Sz72nLI1kpIS7WPi",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "echo \"Cleaning user cache...\"; rm -rf ~/.cache/* 2>/dev/null; echo \"User cache cleaned\""
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        2368,
+        -16
+      ],
+      "id": "df7a1959-3556-4104-9dad-0fce7608d481",
+      "name": "Clean User Cache",
+      "credentials": {
+        "sshPassword": {
+          "id": "Sz72nLI1kpIS7WPi",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "if command -v docker &> /dev/null; then   echo \"Cleaning Docker...\";   sudo docker system df;   sudo docker system prune -af --volumes;   echo \"Docker cleaned\"; else   echo \"Docker not installed\"; fi"
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        -16
+      ],
+      "id": "65112124-3670-4564-b944-9eadc8f4e194",
+      "name": "Docker Cleanup",
+      "credentials": {
+        "sshPassword": {
+          "id": "Sz72nLI1kpIS7WPi",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "echo \"Cleaning logs older than 7 days...\"; sudo find /var/log -type f -name \"*.log\" -mtime +7 -exec truncate -s 0 {} \\; 2>/dev/null; sudo journalctl --vacuum-time=7d 2>/dev/null; echo \"Old logs cleaned\""
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        1952,
+        -16
+      ],
+      "id": "eb085e5e-1653-4399-9fcc-693b091fb909",
+      "name": "Clean Old Logs",
+      "credentials": {
+        "sshPassword": {
+          "id": "Sz72nLI1kpIS7WPi",
+          "name": "SSH Password account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "command": "echo \"Cleaning package cache...\"; sudo apt-get clean 2>/dev/null || sudo yum clean all 2>/dev/null; echo \"Package cache cleaned\""
+      },
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        -16
+      ],
+      "id": "dc5bd0c2-5b1f-45d6-a20b-10b7751c5353",
+      "name": "Clean Package Manager Cache",
+      "notesInFlow": false,
+      "credentials": {
+        "sshPassword": {
+          "id": "Sz72nLI1kpIS7WPi",
+          "name": "SSH Password account"
+        }
+      },
+      "notes": "Clean Package Manager Cache"
+    },
+    {
+      "parameters": {
+        "description": "Call this tool to trigger system cleanup when disk usage is concerning",
+        "workflowId": {
+          "__rl": true,
+          "value": "auiOVVDqKoZXve86",
+          "mode": "list",
+          "cachedResultName": "clean-system-commands"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        224
+      ],
+      "id": "ff272d50-9580-4ae0-83d4-c776cb414b54",
+      "name": "Call n8n Workflow Tool"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "c2e23ae0-bf13-4e21-b73d-356f59955f4c",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "connections": {
+    "Get Storage Breakdown": {
+      "main": [
+        [
+          {
+            "node": "Parse Storage Breakdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Storage Breakdown": {
+      "main": [
+        [
+          {
+            "node": "Analyze Storage (User-Friendly)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Storage (User-Friendly)": {
+      "main": [
+        []
+      ]
+    },
+    "Temp Files Cleanup": {
+      "main": [
+        [
+          {
+            "node": "Get Large Folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean User Cache": {
+      "main": [
+        [
+          {
+            "node": "Temp Files Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Docker Cleanup": {
+      "main": [
+        [
+          {
+            "node": "Clean User Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Old Logs": {
+      "main": [
+        [
+          {
+            "node": "Docker Cleanup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Package Manager Cache": {
+      "main": [
+        [
+          {
+            "node": "Clean Old Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call n8n Workflow Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "Analyze Storage (User-Friendly)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get Storage Breakdown",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "2f3d1c17-fed7-4103-a1a4-9168ba35a2f7",
+  "triggerCount": 0,
+  "tags": []
+}
