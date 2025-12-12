@@ -10,6 +10,10 @@ services:
     env_file:
       - .env
 
+    # [NEW] Force the correct home directory
+    environment:
+      - HOME=/home/node
+
     # Enhanced volume configuration for data persistence
     volumes:
       # Main n8n data (workflows, credentials, settings)
@@ -21,8 +25,8 @@ services:
       # Backup directory
       - ./backups:/backups:rw
       # Temporary fix for permissions
-      - /etc/passwd:/etc/passwd:ro
-      - /etc/group:/etc/group:ro
+      #- /etc/passwd:/etc/passwd:ro
+      #- /etc/group:/etc/group:ro
 
     networks:
       - nginx_network
